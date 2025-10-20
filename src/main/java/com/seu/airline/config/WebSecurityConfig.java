@@ -54,7 +54,14 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 // 允许Swagger相关路径访问
                 .antMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**", "/api-docs/**").permitAll() 
                 .antMatchers("/public/**").permitAll() // 公共接口允许访问
-                .antMatchers("/admin/**").hasRole("ADMIN") // 管理员接口需要ADMIN角色
+                // 航班查询接口允许所有认证用户访问
+                .antMatchers("/api/flights/search").authenticated()
+                // 订单相关接口需要乘客角色
+                .antMatchers("/api/orders/**").hasRole("PASSENGER")
+                // 管理员接口需要ADMIN角色
+                .antMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")
+                // 工作人员接口需要STAFF或ADMIN角色
+                .antMatchers("/api/staff/**").hasAnyRole("STAFF", "ADMIN")
                 .anyRequest().authenticated(); // 其他请求需要认证
 
         // 添加JWT过滤器

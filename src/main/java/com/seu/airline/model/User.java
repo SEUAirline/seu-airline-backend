@@ -1,10 +1,14 @@
 package com.seu.airline.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import javax.persistence.*;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
+@NoArgsConstructor
 @Entity
 @Table(name = "users")
 public class User {
@@ -16,38 +20,48 @@ public class User {
     @Column(unique = true, nullable = false, length = 50)
     private String username;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String password;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "full_name", length = 100)
+    private String fullName;
+
+    @Column(unique = true, length = 100)
     private String email;
 
     @Column(length = 20)
     private String phone;
 
-    @Column(name = "full_name", length = 100)
-    private String fullName;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Role role;
 
-    @Column(name = "id_card", length = 20)
-    private String idCard;
+    @Column(nullable = false, columnDefinition = "tinyint default 1")
+    private Integer status = 1; // 1-启用 0-禁用
 
     @Column(name = "created_at", updatable = false)
-    private Date createdAt;
+    private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
-    private Date updatedAt;
+    private LocalDateTime updatedAt;
 
-    @Column(nullable = false, columnDefinition = "tinyint default 0")
-    private Integer role = 0; // 0: 普通用户, 1: 管理员
+    @JsonIgnoreProperties("user")
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Order> orders;
+
+    // 角色枚举
+    public enum Role {
+        ADMIN, PASSENGER, STAFF
+    }
 
     @PrePersist
     protected void onCreate() {
-        createdAt = new Date();
-        updatedAt = new Date();
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = new Date();
+        updatedAt = LocalDateTime.now();
     }
 }

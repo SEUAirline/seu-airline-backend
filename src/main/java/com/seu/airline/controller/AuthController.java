@@ -80,8 +80,8 @@ public class AuthController {
         user.setPassword(encoder.encode(userDTO.getPassword())); // 加密密码
         user.setPhone(userDTO.getPhone());
         user.setFullName(userDTO.getFullName());
-        user.setIdCard(userDTO.getIdCard());
-        user.setRole(0); // 默认普通用户
+        user.setRole(User.Role.PASSENGER); // 默认普通用户
+        user.setStatus(1); // 默认启用状态
 
         userRepository.save(user);
 

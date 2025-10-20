@@ -18,9 +18,9 @@ public class UserDetailsImpl implements UserDetails {
     private String username;
     private String password;
     private String email;
-    private Integer role;
+    private User.Role role;
 
-    public UserDetailsImpl(Long id, String username, String password, String email, Integer role) {
+    public UserDetailsImpl(Long id, String username, String password, String email, User.Role role) {
         this.id = id;
         this.username = username;
         this.password = password;
@@ -42,10 +42,8 @@ public class UserDetailsImpl implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         List<GrantedAuthority> authorities = new ArrayList<>();
         // 根据用户角色添加权限
-        if (role == 1) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        } else {
-            authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+        if (role != null) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name()));
         }
         return authorities;
     }
