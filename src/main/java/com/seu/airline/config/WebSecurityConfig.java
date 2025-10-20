@@ -51,7 +51,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
                 .authorizeRequests()
                 .antMatchers("/auth/**").permitAll() // 认证相关接口允许访问
-                .antMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // Swagger允许访问
+                // 允许Swagger相关路径访问
+                .antMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**", "/api-docs/**").permitAll() 
                 .antMatchers("/public/**").permitAll() // 公共接口允许访问
                 .antMatchers("/admin/**").hasRole("ADMIN") // 管理员接口需要ADMIN角色
                 .anyRequest().authenticated(); // 其他请求需要认证

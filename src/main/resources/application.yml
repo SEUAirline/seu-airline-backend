@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/seu_airline?useSSL=false&serverTimezone=UTC&characterEncoding=utf-8
     username: root
-    password: 123456
+    password: 380747
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -16,6 +16,9 @@ spring:
     database-platform: org.hibernate.dialect.MySQL8Dialect
   main:
     allow-circular-references: true
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
 
 # JWT配置
 jwt:
