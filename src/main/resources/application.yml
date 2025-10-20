@@ -22,7 +22,9 @@ spring:
 
 # JWT配置
 jwt:
-  secret: seu_airline_jwt_secret_key_2024
+  # 确保密钥长度至少64字符（512位），满足HS512算法安全要求
+  # 此密钥在所有应用实例中必须保持一致，确保重启后令牌仍然有效
+  secret: seu_airline_jwt_secret_key_2024_secure_long_random_string_for_production_use_3210987654321abcdefghijklmnopqrstuvwxyz
   expiration: 86400000  # 24小时
   header: Authorization
 
