@@ -8,6 +8,7 @@ release.properties
 
 # IDE
 .idea/
+.vscode/
 *.iml
 *.ipr
 *.iws

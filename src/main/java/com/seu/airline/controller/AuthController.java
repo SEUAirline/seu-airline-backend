@@ -14,9 +14,13 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -93,5 +97,65 @@ public class AuthController {
     public ResponseEntity<?> getCurrentUser(Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         return ResponseEntity.ok(userDetails);
+    }
+
+    // 用户登出
+    @PostMapping("/logout")
+    public ResponseEntity<?> logoutUser(HttpServletRequest request) {
+        String jwt = parseJwt(request);
+        if (jwt != null) {
+            // 将token加入黑名单
+            jwtUtils.addTokenToBlacklist(jwt);
+            return ResponseEntity.ok("登出成功！");
+        }
+        return ResponseEntity.badRequest().body("无效的token");
+    }
+
+    // 刷新token
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request) {
+        String oldToken = parseJwt(request);
+        if (oldToken == null) {
+            return ResponseEntity.badRequest().body("无效的token");
+        }
+
+        // 验证旧token
+        if (!jwtUtils.validateJwtToken(oldToken)) {
+            return ResponseEntity.badRequest().body("token已失效或无效");
+        }
+
+        // 生成新token
+        String newToken = jwtUtils.refreshToken(oldToken);
+        if (newToken == null) {
+            return ResponseEntity.badRequest().body("刷新token失败");
+        }
+
+        // 获取用户信息
+        String username = jwtUtils.getUserNameFromJwtToken(newToken);
+        User user = userRepository.findByUsername(username).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.badRequest().body("用户不存在");
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", newToken);
+        response.put("type", "Bearer");
+        response.put("id", user.getId());
+        response.put("username", user.getUsername());
+        response.put("role", user.getRole());
+
+        return ResponseEntity.ok(response);
+    }
+
+    // 从请求头中解析JWT token
+    private String parseJwt(HttpServletRequest request) {
+        String headerAuth = request.getHeader("Authorization");
+
+        if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
+            return headerAuth.substring(7);
+        }
+
+        return null;
     }
 }
