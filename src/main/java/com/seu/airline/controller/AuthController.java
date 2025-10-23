@@ -1,7 +1,8 @@
 package com.seu.airline.controller;
 
+import com.seu.airline.dto.ApiResponse;
+import com.seu.airline.dto.AuthResponseDTO;
 import com.seu.airline.dto.LoginDTO;
-import com.seu.airline.dto.TokenDTO;
 import com.seu.airline.dto.UserDTO;
 import com.seu.airline.model.User;
 import com.seu.airline.repository.UserRepository;
@@ -19,11 +20,9 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class AuthController {
 
@@ -42,25 +41,30 @@ public class AuthController {
     // 用户登录
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginDTO loginDTO) {
-        // 认证用户
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginDTO.getUsername(), loginDTO.getPassword()));
+        try {
+            // 认证用户
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginDTO.getUsername(), loginDTO.getPassword()));
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
 
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        // 返回token和用户信息
-        return ResponseEntity.ok(new TokenDTO(
-                jwt,
-                "Bearer",
-                userDetails.getId(),
-                userDetails.getUsername(),
-                userDetails.getRole()));
-    }
+            // 获取完整的用户信息
+            User user = userRepository.findByUsername(userDetails.getUsername()).orElse(null);
+            if (user == null) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("用户不存在"));
+            }
 
-    // 用户注册
+            // 返回AuthResponseDTO格式：{user, token}
+            AuthResponseDTO response = new AuthResponseDTO(user, jwt);
+            return ResponseEntity.ok(ApiResponse.success(response, "登录成功"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("用户名或密码错误"));
+        }
+    } // 用户注册
+
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody UserDTO userDTO) {
         // 检查用户名是否已存在
@@ -87,9 +91,16 @@ public class AuthController {
         user.setRole(User.Role.PASSENGER); // 默认普通用户
         user.setStatus(1); // 默认启用状态
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
 
-        return ResponseEntity.ok("用户注册成功！");
+        // 生成token
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(userDTO.getUsername(), userDTO.getPassword()));
+        String jwt = jwtUtils.generateJwtToken(authentication);
+
+        // 返回AuthResponseDTO格式：{user, token}
+        AuthResponseDTO response = new AuthResponseDTO(savedUser, jwt);
+        return ResponseEntity.ok(response);
     }
 
     // 获取当前用户信息
@@ -106,9 +117,9 @@ public class AuthController {
         if (jwt != null) {
             // 将token加入黑名单
             jwtUtils.addTokenToBlacklist(jwt);
-            return ResponseEntity.ok("登出成功！");
+            return ResponseEntity.ok(ApiResponse.success("登出成功"));
         }
-        return ResponseEntity.badRequest().body("无效的token");
+        return ResponseEntity.badRequest().body(ApiResponse.error("无效的token"));
     }
 
     // 刷新token
@@ -116,18 +127,18 @@ public class AuthController {
     public ResponseEntity<?> refreshToken(HttpServletRequest request) {
         String oldToken = parseJwt(request);
         if (oldToken == null) {
-            return ResponseEntity.badRequest().body("无效的token");
+            return ResponseEntity.badRequest().body(ApiResponse.error("无效的token"));
         }
 
         // 验证旧token
         if (!jwtUtils.validateJwtToken(oldToken)) {
-            return ResponseEntity.badRequest().body("token已失效或无效");
+            return ResponseEntity.badRequest().body(ApiResponse.error("token已失效或无效"));
         }
 
         // 生成新token
         String newToken = jwtUtils.refreshToken(oldToken);
         if (newToken == null) {
-            return ResponseEntity.badRequest().body("刷新token失败");
+            return ResponseEntity.badRequest().body(ApiResponse.error("刷新token失败"));
         }
 
         // 获取用户信息
@@ -135,17 +146,11 @@ public class AuthController {
         User user = userRepository.findByUsername(username).orElse(null);
 
         if (user == null) {
-            return ResponseEntity.badRequest().body("用户不存在");
+            return ResponseEntity.badRequest().body(ApiResponse.error("用户不存在"));
         }
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", newToken);
-        response.put("type", "Bearer");
-        response.put("id", user.getId());
-        response.put("username", user.getUsername());
-        response.put("role", user.getRole());
-
-        return ResponseEntity.ok(response);
+        AuthResponseDTO response = new AuthResponseDTO(user, newToken);
+        return ResponseEntity.ok(ApiResponse.success(response, "Token刷新成功"));
     }
 
     // 从请求头中解析JWT token

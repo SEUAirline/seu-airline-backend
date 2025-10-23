@@ -19,9 +19,16 @@ public interface FlightRepository extends JpaRepository<Flight, Long> {
     // 根据出发和到达机场以及日期范围查询航班
     @Query("SELECT f FROM Flight f WHERE f.departureAirport.id = :departureAirportId AND f.arrivalAirport.id = :arrivalAirportId AND f.departureTime BETWEEN :startDate AND :endDate AND f.status <> 'CANCELLED'")
     List<Flight> findFlights(@Param("departureAirportId") Long departureAirportId,
-                            @Param("arrivalAirportId") Long arrivalAirportId,
-                            @Param("startDate") LocalDateTime startDate,
-                            @Param("endDate") LocalDateTime endDate);
+            @Param("arrivalAirportId") Long arrivalAirportId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    // 根据城市查询航班
+    @Query("SELECT f FROM Flight f WHERE f.departureAirport.city = :departureCity AND f.arrivalAirport.city = :arrivalCity AND f.departureTime BETWEEN :startDate AND :endDate AND f.status <> 'CANCELLED'")
+    List<Flight> findFlightsByCity(@Param("departureCity") String departureCity,
+            @Param("arrivalCity") String arrivalCity,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 
     // 根据航空公司查询航班
     List<Flight> findByAirlineId(Long airlineId);
