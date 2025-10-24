@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -22,9 +24,9 @@ public class FlightDTO {
     private String arrivalAirport;
     private String departureCity;
     private String arrivalCity;
-    private String departureTime; // HH:mm格式
-    private String arrivalTime; // HH:mm格式
-    private String date; // yyyy-MM-dd格式
+    private String departureTime; // ISO-8601 完整日期时间（含时区偏移），例如 2025-11-01T08:00:00+08:00
+    private String arrivalTime; // ISO-8601 完整日期时间（含时区偏移）
+    private String date; // yyyy-MM-dd 格式（保留备用）
     private String duration;
     private Double price;
     private Integer economySeats;
@@ -42,17 +44,17 @@ public class FlightDTO {
         this.departureCity = flight.getDepartureAirport() != null ? flight.getDepartureAirport().getCity() : "";
         this.arrivalCity = flight.getArrivalAirport() != null ? flight.getArrivalAirport().getCity() : "";
 
-        // 格式化时间
+        // 格式化时间为带时区偏移的 ISO-8601 字符串，使前端可以直接用 new Date(datetime) 解析
         if (flight.getDepartureTime() != null) {
-            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            this.departureTime = flight.getDepartureTime().format(timeFormatter);
-            this.date = flight.getDepartureTime().format(dateFormatter);
+            // 将 LocalDateTime 视为系统时区的时间点并格式化为带偏移的字符串
+            ZonedDateTime departureZdt = flight.getDepartureTime().atZone(ZoneId.systemDefault());
+            this.departureTime = departureZdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+            this.date = flight.getDepartureTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         }
 
         if (flight.getArrivalTime() != null) {
-            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-            this.arrivalTime = flight.getArrivalTime().format(timeFormatter);
+            ZonedDateTime arrivalZdt = flight.getArrivalTime().atZone(ZoneId.systemDefault());
+            this.arrivalTime = arrivalZdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         }
 
         // 计算飞行时长
