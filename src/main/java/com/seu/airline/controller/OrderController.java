@@ -95,9 +95,13 @@ public class OrderController {
                 }
             }
 
-            return ResponseEntity.ok(savedOrder);
+            // 获取完整订单信息并转换为DTO
+            List<OrderItem> orderItems = orderItemRepository.findByOrderId(savedOrder.getId());
+            OrderDTO orderDTO = new OrderDTO(savedOrder, orderItems);
+
+            return ResponseEntity.ok(ApiResponse.success(orderDTO, "订单创建成功"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("创建订单失败: " + e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error("创建订单失败: " + e.getMessage()));
         }
     }
 

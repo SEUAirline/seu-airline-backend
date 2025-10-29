@@ -1,5 +1,6 @@
 package com.seu.airline.controller;
 
+import com.seu.airline.dto.ApiResponse;
 import com.seu.airline.model.Flight;
 import com.seu.airline.model.Order;
 import com.seu.airline.model.OrderItem;
@@ -37,7 +38,7 @@ public class StaffController {
     @GetMapping("/flights")
     public ResponseEntity<?> getAllFlights() {
         List<Flight> flights = flightRepository.findAll();
-        return ResponseEntity.ok(flights);
+        return ResponseEntity.ok(ApiResponse.success(flights, "获取航班列表成功"));
     }
 
     // 获取特定状态的航班
@@ -46,9 +47,9 @@ public class StaffController {
         try {
             Flight.FlightStatus flightStatus = Flight.FlightStatus.valueOf(status.toUpperCase());
             List<Flight> flights = flightRepository.findByStatus(flightStatus);
-            return ResponseEntity.ok(flights);
+            return ResponseEntity.ok(ApiResponse.success(flights, "获取" + status + "状态航班成功"));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("无效的航班状态");
+            return ResponseEntity.badRequest().body(ApiResponse.error("无效的航班状态: " + status));
         }
     }
 
@@ -59,7 +60,7 @@ public class StaffController {
             @RequestParam String status) {
         Optional<Flight> flightOpt = flightRepository.findById(id);
         if (!flightOpt.isPresent()) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(ApiResponse.error("航班不存在"));
         }
 
         try {
@@ -69,9 +70,9 @@ public class StaffController {
             flight.setUpdatedAt(LocalDateTime.now());
             flightRepository.save(flight);
 
-            return ResponseEntity.ok(flight);
+            return ResponseEntity.ok(ApiResponse.success(flight, "航班状态更新成功"));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("无效的航班状态");
+            return ResponseEntity.badRequest().body(ApiResponse.error("无效的航班状态: " + status));
         }
     }
 
@@ -80,7 +81,7 @@ public class StaffController {
     public ResponseEntity<?> getFlightPassengers(@PathVariable Long id) {
         Optional<Flight> flightOpt = flightRepository.findById(id);
         if (!flightOpt.isPresent()) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(ApiResponse.error("航班不存在"));
         }
 
         // 获取航班的所有座位
@@ -95,7 +96,7 @@ public class StaffController {
             }
         }
 
-        return ResponseEntity.ok(passengers);
+        return ResponseEntity.ok(ApiResponse.success(passengers, "获取航班乘客信息成功"));
     }
 
     // 查看订单详情（用于核对乘客信息）
@@ -103,14 +104,14 @@ public class StaffController {
     public ResponseEntity<?> getOrderDetails(@PathVariable Long id) {
         Optional<Order> orderOpt = orderRepository.findById(id);
         if (!orderOpt.isPresent()) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(ApiResponse.error("订单不存在"));
         }
 
         Order order = orderOpt.get();
         List<OrderItem> items = orderItemRepository.findByOrderId(id);
 
         OrderDetailResponse response = new OrderDetailResponse(order, items);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response, "获取订单详情成功"));
     }
 
     // 手动取消超时未支付的订单
@@ -118,17 +119,17 @@ public class StaffController {
     public ResponseEntity<?> cancelOverdueOrder(@PathVariable Long id) {
         Optional<Order> orderOpt = orderRepository.findById(id);
         if (!orderOpt.isPresent()) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(ApiResponse.error("订单不存在"));
         }
 
         Order order = orderOpt.get();
         if (order.getStatus() != Order.OrderStatus.PENDING) {
-            return ResponseEntity.badRequest().body("只能取消待支付的订单");
+            return ResponseEntity.badRequest().body(ApiResponse.error("只能取消待支付的订单"));
         }
 
         // 检查是否超过支付时间（例如30分钟）
         if (order.getCreatedAt().plusMinutes(30).isAfter(LocalDateTime.now())) {
-            return ResponseEntity.badRequest().body("订单未超时，不能强制取消");
+            return ResponseEntity.badRequest().body(ApiResponse.error("订单未超时，不能强制取消"));
         }
 
         // 更新订单状态
@@ -147,7 +148,7 @@ public class StaffController {
             }
         }
 
-        return ResponseEntity.ok(order);
+        return ResponseEntity.ok(ApiResponse.success(order, "超时订单已取消"));
     }
 
     // 响应类

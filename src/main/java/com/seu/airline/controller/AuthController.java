@@ -71,14 +71,14 @@ public class AuthController {
         if (userRepository.existsByUsername(userDTO.getUsername())) {
             return ResponseEntity
                     .badRequest()
-                    .body("错误：用户名已被使用！");
+                    .body(ApiResponse.error("用户名已被使用"));
         }
 
         // 检查邮箱是否已存在
         if (userRepository.existsByEmail(userDTO.getEmail())) {
             return ResponseEntity
                     .badRequest()
-                    .body("错误：邮箱已被注册！");
+                    .body(ApiResponse.error("邮箱已被注册"));
         }
 
         // 创建新用户
@@ -100,14 +100,14 @@ public class AuthController {
 
         // 返回AuthResponseDTO格式：{user, token}
         AuthResponseDTO response = new AuthResponseDTO(savedUser, jwt);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response, "注册成功"));
     }
 
     // 获取当前用户信息
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        return ResponseEntity.ok(userDetails);
+        return ResponseEntity.ok(ApiResponse.success(userDetails, "获取用户信息成功"));
     }
 
     // 用户登出
