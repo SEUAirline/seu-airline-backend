@@ -1,5 +1,9 @@
 # JWT与Redis整合功能测试脚本
 
+# 设置PowerShell输出编码为UTF-8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$PSDefaultParameterValues['*:Encoding'] = 'utf8'
+
 # 注意: 
 # 1. 确保Redis服务正在运行
 # 2. 确保Spring Boot应用正在运行
@@ -20,12 +24,33 @@ $loginBody = @{
 
 try {
     $response = Invoke-RestMethod -Uri "$baseUrl/auth/login" -Method Post -Body $loginBody -ContentType "application/json"
-    $token = $response.token
-    Write-Host "✓ 登录成功!" -ForegroundColor Green
-    Write-Host "Token: $($token.Substring(0, 50))..." -ForegroundColor Cyan
-    Write-Host "用户: $($response.username), 角色: $($response.role)" -ForegroundColor Cyan
+    
+    # 处理统一的API响应格式
+    if ($response -and $response.success -and $response.data -and $response.data.token) {
+        $token = $response.data.token
+        $user = $response.data.user
+        
+        Write-Host "✓ 登录成功!" -ForegroundColor Green
+        
+        # 安全地显示token
+        if ($token.Length -gt 50) {
+            Write-Host "Token: $($token.Substring(0, 50))..." -ForegroundColor Cyan
+        } else {
+            Write-Host "Token: $token" -ForegroundColor Cyan
+        }
+        
+        Write-Host "用户: $($user.username), 角色: $($user.role)" -ForegroundColor Cyan
+        Write-Host "消息: $($response.message)" -ForegroundColor Cyan
+    } else {
+        Write-Host "✗ 登录响应格式错误" -ForegroundColor Red
+        Write-Host "响应内容: $($response | ConvertTo-Json)" -ForegroundColor Yellow
+        exit 1
+    }
 } catch {
     Write-Host "✗ 登录失败: $($_.Exception.Message)" -ForegroundColor Red
+    if ($_.ErrorDetails.Message) {
+        Write-Host "错误详情: $($_.ErrorDetails.Message)" -ForegroundColor Yellow
+    }
     exit 1
 }
 
@@ -72,32 +97,43 @@ Start-Sleep -Seconds 2
 Write-Host "`n测试4: 刷新Token" -ForegroundColor Yellow
 try {
     $response = Invoke-RestMethod -Uri "$baseUrl/auth/refresh" -Method Post -Headers $headers
-    $newToken = $response.token
-    Write-Host "✓ Token刷新成功!" -ForegroundColor Green
-    Write-Host "新Token: $($newToken.Substring(0, 50))..." -ForegroundColor Cyan
     
-    # 更新headers为新token
-    $headers.Authorization = "Bearer $newToken"
-    
-    # 尝试使用旧token (应该失败)
-    Write-Host "`n测试4.1: 验证旧Token已失效" -ForegroundColor Yellow
-    $oldHeaders = @{
-        Authorization = "Bearer $token"
+    # 处理统一的API响应格式
+    if ($response -and $response.success -and $response.data -and $response.data.token) {
+        $newToken = $response.data.token
+        Write-Host "✓ Token刷新成功!" -ForegroundColor Green
+        
+        if ($newToken.Length -gt 50) {
+            Write-Host "新Token: $($newToken.Substring(0, 50))..." -ForegroundColor Cyan
+        } else {
+            Write-Host "新Token: $newToken" -ForegroundColor Cyan
+        }
+        
+        # 更新headers为新token
+        $headers.Authorization = "Bearer $newToken"
+        
+        # 尝试使用旧token (应该失败)
+        Write-Host "`n测试4.1: 验证旧Token已失效" -ForegroundColor Yellow
+        $oldHeaders = @{
+            Authorization = "Bearer $token"
+        }
+        try {
+            $response = Invoke-RestMethod -Uri "$baseUrl/auth/me" -Method Get -Headers $oldHeaders
+            Write-Host "✗ 旧Token仍然有效 (不符合预期)" -ForegroundColor Red
+        } catch {
+            Write-Host "✓ 旧Token已失效 (符合预期)" -ForegroundColor Green
+        }
+        
+        # 使用新token访问
+        Write-Host "`n测试4.2: 使用新Token访问" -ForegroundColor Yellow
+        $response = Invoke-RestMethod -Uri "$baseUrl/auth/me" -Method Get -Headers $headers
+        Write-Host "✓ 新Token可以正常使用!" -ForegroundColor Green
+        
+        # 更新token变量为新token
+        $token = $newToken
+    } else {
+        Write-Host "✗ 刷新响应格式错误" -ForegroundColor Red
     }
-    try {
-        $response = Invoke-RestMethod -Uri "$baseUrl/auth/me" -Method Get -Headers $oldHeaders
-        Write-Host "✗ 旧Token仍然有效 (不符合预期)" -ForegroundColor Red
-    } catch {
-        Write-Host "✓ 旧Token已失效 (符合预期)" -ForegroundColor Green
-    }
-    
-    # 使用新token访问
-    Write-Host "`n测试4.2: 使用新Token访问" -ForegroundColor Yellow
-    $response = Invoke-RestMethod -Uri "$baseUrl/auth/me" -Method Get -Headers $headers
-    Write-Host "✓ 新Token可以正常使用!" -ForegroundColor Green
-    
-    # 更新token变量为新token
-    $token = $newToken
     
 } catch {
     Write-Host "✗ Token刷新失败: $($_.Exception.Message)" -ForegroundColor Red
@@ -125,7 +161,12 @@ Start-Sleep -Seconds 2
 Write-Host "`n测试6: 用户登出" -ForegroundColor Yellow
 try {
     $response = Invoke-RestMethod -Uri "$baseUrl/auth/logout" -Method Post -Headers $headers
-    Write-Host "✓ 登出成功: $response" -ForegroundColor Green
+    
+    if ($response -and $response.success) {
+        Write-Host "✓ 登出成功: $($response.message)" -ForegroundColor Green
+    } else {
+        Write-Host "✓ 登出成功" -ForegroundColor Green
+    }
     
     # 验证Token已失效
     Write-Host "`n测试6.1: 验证Token已失效" -ForegroundColor Yellow

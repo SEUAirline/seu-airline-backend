@@ -55,20 +55,21 @@ public class WebSecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .antMatchers("/api/auth/**").permitAll() // 认证相关接口允许访问
+                        // 注意: context-path是/api，所以这里的路径是相对于/api的
+                        .antMatchers("/auth/**").permitAll() // 认证相关接口允许访问
                         // 允许Swagger相关路径访问
                         .antMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**",
                                 "/api-docs/**")
                         .permitAll()
                         .antMatchers("/public/**").permitAll() // 公共接口允许访问
                         // 允许机场和航班查询接口无需认证(方便用户搜索)
-                        .antMatchers("/api/airports/**", "/api/flights/**").permitAll()
+                        .antMatchers("/airports/**", "/flights/**").permitAll()
                         // 订单相关接口需要乘客角色
-                        .antMatchers("/api/orders/**").hasRole("PASSENGER")
+                        .antMatchers("/orders/**").hasRole("PASSENGER")
                         // 管理员接口需要ADMIN角色
-                        .antMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")
+                        .antMatchers("/admin/**").hasRole("ADMIN")
                         // 工作人员接口需要STAFF或ADMIN角色
-                        .antMatchers("/api/staff/**").hasAnyRole("STAFF", "ADMIN")
+                        .antMatchers("/staff/**").hasAnyRole("STAFF", "ADMIN")
                         .anyRequest().authenticated() // 其他请求需要认证
                 )
                 .authenticationProvider(authenticationProvider())

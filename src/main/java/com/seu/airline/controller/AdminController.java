@@ -13,13 +13,13 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/admin")
+@RequestMapping("/admin")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class AdminController {
 
     @Autowired
     private UserRepository userRepository;
-    
+
     @Autowired
     private OrderRepository orderRepository;
 
@@ -51,17 +51,17 @@ public class AdminController {
         if (!userOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         User user = userOpt.get();
         // 不允许禁用管理员账户
         if (user.getRole() == User.Role.ADMIN && status == 0) {
             return ResponseEntity.badRequest().body("不能禁用管理员账户");
         }
-        
+
         user.setStatus(status);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
-        
+
         return ResponseEntity.ok(user);
     }
 
@@ -92,7 +92,7 @@ public class AdminController {
         try {
             LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
             LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
-            
+
             List<Order> orders = orderRepository.findByCreatedAtBetween(start, end);
             return ResponseEntity.ok(orders);
         } catch (Exception e) {

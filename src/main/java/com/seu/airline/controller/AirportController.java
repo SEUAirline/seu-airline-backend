@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/airport")
+@RequestMapping("/airport")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class AirportController {
 

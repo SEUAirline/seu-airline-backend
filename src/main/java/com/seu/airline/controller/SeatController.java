@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/seats")
+@RequestMapping("/seats")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class SeatController {
 
@@ -28,8 +28,7 @@ public class SeatController {
     public ResponseEntity<?> getAvailableSeats(@PathVariable Long flightId) {
         List<Seat> seats = seatRepository.findByFlightIdAndStatus(
                 flightId,
-                Seat.SeatStatus.AVAILABLE
-        );
+                Seat.SeatStatus.AVAILABLE);
         return ResponseEntity.ok(seats);
     }
 
@@ -43,8 +42,7 @@ public class SeatController {
             List<Seat> seats = seatRepository.findByFlightIdAndSeatTypeAndStatus(
                     flightId,
                     type,
-                    Seat.SeatStatus.AVAILABLE
-            );
+                    Seat.SeatStatus.AVAILABLE);
             return ResponseEntity.ok(seats);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("无效的座位类型");

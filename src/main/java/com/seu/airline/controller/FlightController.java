@@ -16,7 +16,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/flight")
+@RequestMapping("/flight")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class FlightController {
 

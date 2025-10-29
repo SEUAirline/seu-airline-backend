@@ -17,19 +17,19 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/staff")
+@RequestMapping("/staff")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class StaffController {
 
     @Autowired
     private FlightRepository flightRepository;
-    
+
     @Autowired
     private OrderRepository orderRepository;
-    
+
     @Autowired
     private OrderItemRepository orderItemRepository;
-    
+
     @Autowired
     private SeatRepository seatRepository;
 
@@ -61,14 +61,14 @@ public class StaffController {
         if (!flightOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         try {
             Flight flight = flightOpt.get();
             Flight.FlightStatus newStatus = Flight.FlightStatus.valueOf(status.toUpperCase());
             flight.setStatus(newStatus);
             flight.setUpdatedAt(LocalDateTime.now());
             flightRepository.save(flight);
-            
+
             return ResponseEntity.ok(flight);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("无效的航班状态");
@@ -82,10 +82,10 @@ public class StaffController {
         if (!flightOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         // 获取航班的所有座位
         List<Seat> seats = seatRepository.findByFlightId(id);
-        
+
         // 获取已被占用的座位的订单信息
         List<OrderItem> passengers = new java.util.ArrayList<>();
         for (Seat seat : seats) {
@@ -94,7 +94,7 @@ public class StaffController {
                 passengers.addAll(items);
             }
         }
-        
+
         return ResponseEntity.ok(passengers);
     }
 
@@ -105,10 +105,10 @@ public class StaffController {
         if (!orderOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         Order order = orderOpt.get();
         List<OrderItem> items = orderItemRepository.findByOrderId(id);
-        
+
         OrderDetailResponse response = new OrderDetailResponse(order, items);
         return ResponseEntity.ok(response);
     }
@@ -120,22 +120,22 @@ public class StaffController {
         if (!orderOpt.isPresent()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         Order order = orderOpt.get();
         if (order.getStatus() != Order.OrderStatus.PENDING) {
             return ResponseEntity.badRequest().body("只能取消待支付的订单");
         }
-        
+
         // 检查是否超过支付时间（例如30分钟）
         if (order.getCreatedAt().plusMinutes(30).isAfter(LocalDateTime.now())) {
             return ResponseEntity.badRequest().body("订单未超时，不能强制取消");
         }
-        
+
         // 更新订单状态
         order.setStatus(Order.OrderStatus.CANCELLED);
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
-        
+
         // 释放座位
         List<OrderItem> orderItems = orderItemRepository.findByOrderId(id);
         for (OrderItem item : orderItems) {
@@ -146,7 +146,7 @@ public class StaffController {
                 seatRepository.save(seat);
             }
         }
-        
+
         return ResponseEntity.ok(order);
     }
 
@@ -154,16 +154,27 @@ public class StaffController {
     public static class OrderDetailResponse {
         private Order order;
         private List<OrderItem> items;
-        
+
         public OrderDetailResponse(Order order, List<OrderItem> items) {
             this.order = order;
             this.items = items;
         }
-        
+
         // getters and setters
-        public Order getOrder() { return order; }
-        public void setOrder(Order order) { this.order = order; }
-        public List<OrderItem> getItems() { return items; }
-        public void setItems(List<OrderItem> items) { this.items = items; }
+        public Order getOrder() {
+            return order;
+        }
+
+        public void setOrder(Order order) {
+            this.order = order;
+        }
+
+        public List<OrderItem> getItems() {
+            return items;
+        }
+
+        public void setItems(List<OrderItem> items) {
+            this.items = items;
+        }
     }
 }

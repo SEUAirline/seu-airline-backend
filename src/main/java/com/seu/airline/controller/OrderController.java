@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 import java.math.BigDecimal;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/orders")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class OrderController {
 
