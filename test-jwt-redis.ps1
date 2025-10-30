@@ -1,4 +1,4 @@
-# JWT与Redis整合功能测试脚本
+﻿# JWT与Redis整合功能测试脚本
 
 # 设置PowerShell输出编码为UTF-8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
