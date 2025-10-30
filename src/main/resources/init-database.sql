@@ -4,6 +4,10 @@
 -- 此脚本可重复执行，使用 ON DUPLICATE KEY UPDATE 避免重复插入
 -- ====================================================================
 
+-- 设置SQL模式，确保兼容性
+SET sql_mode = '';
+SET NAMES utf8mb4;
+
 -- 创建数据库
 CREATE DATABASE IF NOT EXISTS seu_airline CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -131,7 +135,7 @@ CREATE TABLE IF NOT EXISTS order_items (
 -- ====================================================================
 
 -- 插入用户数据（密码统一为：admin123 或 passenger123，已加密）
--- 密码哈希：$2a$10$N.zmdr9k7uOCQb376NoUnuTBv.09h90p8tV98a4OVaHfQn5L34Fxy
+-- 密码哈希：$2a$10$S3dlkLncuBuBNDbq.gDiVupoIaCfkjPBSfnw2gDQKFWEnodqtEIry
 INSERT INTO
     users (
         username,
@@ -144,7 +148,7 @@ INSERT INTO
     )
 VALUES (
         'admin',
-        '$2a$10$N.zmdr9k7uOCQb376NoUnuTBv.09h90p8tV98a4OVaHfQn5L34Fxy',
+        '$2a$10$blLCUSMOPLzMICzsaMVEIuU5dCurVoOokym7l.LYyVIbkW31yD.R2',
         '系统管理员',
         'admin@seuairline.com',
         '13800138000',
@@ -153,7 +157,7 @@ VALUES (
     ),
     (
         'passenger1',
-        '$2a$10$N.zmdr9k7uOCQb376NoUnuTBv.09h90p8tV98a4OVaHfQn5L34Fxy',
+        '$2a$10$S3dlkLncuBuBNDbq.gDiVupoIaCfkjPBSfnw2gDQKFWEnodqtEIry',
         '张三',
         'zhangsan@example.com',
         '13900139001',
@@ -162,7 +166,7 @@ VALUES (
     ),
     (
         'passenger2',
-        '$2a$10$N.zmdr9k7uOCQb376NoUnuTBv.09h90p8tV98a4OVaHfQn5L34Fxy',
+        '$2a$10$S3dlkLncuBuBNDbq.gDiVupoIaCfkjPBSfnw2gDQKFWEnodqtEIry',
         '李四',
         'lisi@example.com',
         '13900139002',
@@ -171,7 +175,7 @@ VALUES (
     ),
     (
         'staff1',
-        '$2a$10$N.zmdr9k7uOCQb376NoUnuTBv.09h90p8tV98a4OVaHfQn5L34Fxy',
+        '$2a$10$S3dlkLncuBuBNDbq.gDiVupoIaCfkjPBSfnw2gDQKFWEnodqtEIry',
         '王五',
         'wangwu@seuairline.com',
         '13900139003',
