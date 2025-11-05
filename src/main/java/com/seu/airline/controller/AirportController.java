@@ -1,15 +1,10 @@
 package com.seu.airline.controller;
 
-import com.seu.airline.dto.AirportDTO;
 import com.seu.airline.dto.ApiResponse;
-import com.seu.airline.model.Airport;
-import com.seu.airline.repository.AirportRepository;
+import com.seu.airline.service.AirportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/airport")
@@ -17,23 +12,27 @@ import java.util.stream.Collectors;
 public class AirportController {
 
     @Autowired
-    private AirportRepository airportRepository;
+    private AirportService airportService;
 
     // 获取所有机场列表
     @GetMapping("/list")
     public ResponseEntity<?> getAllAirports() {
-        List<Airport> airports = airportRepository.findAll();
-        List<AirportDTO> airportDTOs = airports.stream()
-                .map(AirportDTO::new)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.success(airportDTOs));
+        try {
+            var airportDTOs = airportService.getAllAirports();
+            return ResponseEntity.ok(ApiResponse.success(airportDTOs));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("获取机场列表失败"));
+        }
     }
 
     // 根据代码获取机场
     @GetMapping("/{code}")
     public ResponseEntity<?> getAirportByCode(@PathVariable String code) {
-        return airportRepository.findByCode(code)
-                .map(airport -> ResponseEntity.ok(ApiResponse.success(new AirportDTO(airport))))
-                .orElse(ResponseEntity.status(404).body(ApiResponse.error("机场不存在")));
+        try {
+            var airportDTO = airportService.getAirportByCode(code);
+            return ResponseEntity.ok(ApiResponse.success(airportDTO));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
+        }
     }
 }
