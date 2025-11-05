@@ -66,6 +66,8 @@ public class WebSecurityConfig {
                         .antMatchers("/airports/**", "/flights/**").permitAll()
                         // 订单相关接口需要乘客角色
                         .antMatchers("/orders/**").hasRole("PASSENGER")
+                        // 允许所有认证用户访问RabbitMQ相关接口(用于测试)
+                        .antMatchers("/rabbitmq/**").authenticated()
                         // 管理员接口需要ADMIN角色
                         .antMatchers("/admin/**").hasRole("ADMIN")
                         // 工作人员接口需要STAFF或ADMIN角色

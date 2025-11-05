@@ -10,6 +10,7 @@
 - RESTful API
 - 数据持久化（MySQL）
 - API 文档（Swagger）
+- 消息队列（RabbitMQ）用于异步处理
 
 ## 技术栈
 
@@ -19,6 +20,7 @@
 - MySQL
 - JWT
 - Swagger
+- RabbitMQ
 
 ## 快速开始
 
@@ -28,6 +30,7 @@
 - Maven 3.6 或更高版本
 - MySQL 8.0 或更高版本
 - **Redis 6.0 或更高版本** ⚠️ **必需**
+- **RabbitMQ 3.8 或更高版本** ⚠️ **必需**
 
 ### 前置准备
 
@@ -119,6 +122,7 @@ mvn spring-boot:run
 - [ ] MySQL 服务已启动
 - [ ] MySQL 数据库 `seu_airline` 已创建
 - [ ] **Redis 服务已启动** ⚠️
+- [ ] **RabbitMQ 服务已启动** ⚠️
 - [ ] `application.yml` 中的配置正确（数据库密码、Redis地址等）
 
 如果遇到以下错误，说明 Redis 未启动：
@@ -153,11 +157,12 @@ http://localhost:8080/api/swagger-ui/
 
 ## 注意事项
 
-- **⚠️ 必须先启动 Redis 服务，否则应用无法启动**
+- **⚠️ 必须先启动 Redis 和 RabbitMQ 服务，否则应用无法启动**
 - 首次启动时，系统会自动创建必要的数据库表
 - 密码存储使用 BCrypt 加密
 - JWT 令牌有效期为 24 小时（可在配置文件中修改）
 - Redis 用于存储用户会话、缓存数据等
+- RabbitMQ 用于处理异步任务，包括订单处理、日志收集和通知发送
 
 ## 常见问题
 
@@ -178,6 +183,58 @@ redis-server
 ```bash
 redis-cli ping
 # 返回 PONG 表示运行正常
+```
+
+### Q: RabbitMQ 如何安装？
+**A:** 
+- **Windows:** (也可以通过老师群里文件安装erlang(OTP 25.3.2)和rabbitmq-server-3.12.11.exe)
+  1. 下载并安装 [Erlang](https://www.erlang.org/downloads)
+  2. 下载并安装 [RabbitMQ Server](https://www.rabbitmq.com/install-windows.html)
+  3. 启动 RabbitMQ 服务
+
+- **Mac:** 
+  ```bash
+  brew install rabbitmq
+  # 启动服务
+  brew services start rabbitmq
+  ```
+
+- **Linux (Ubuntu/Debian):** 
+  ```bash
+  # 安装 Erlang
+  sudo apt-get install -y erlang
+  # 安装 RabbitMQ
+  sudo apt-get install -y rabbitmq-server
+  # 启动服务
+  sudo systemctl start rabbitmq-server
+  ```
+
+### Q: 如何查看 RabbitMQ 是否正在运行？
+**A:** 
+```bash
+# Windows (使用命令提示符或 PowerShell)
+rabbitmqctl status
+
+# Linux/Mac
+rabbitmq-diagnostics status
+
+# 或检查 Web 管理界面是否可访问
+# 默认地址: http://localhost:15672
+# 默认用户名: guest
+# 默认密码: guest
+```
+
+### Q: 启动时报错 "Unable to connect to RabbitMQ"
+**A:** 请先启动 RabbitMQ 服务：
+```bash
+# Windows
+net start RabbitMQ
+
+# Linux
+sudo systemctl start rabbitmq-server
+
+# Mac
+brew services start rabbitmq
 ```
 
 ### Q: 数据库连接失败

@@ -9,7 +9,7 @@ server:
 
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/seu_airline?useSSL=false&serverTimezone=UTC&characterEncoding=utf-8
+    url: jdbc:mysql://localhost:3306/seu_airline?useSSL=false&serverTimezone=UTC&characterEncoding=utf-8&allowPublicKeyRetrieval=true
     username: root
     password: 380747
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -35,6 +35,26 @@ spring:
         max-wait: -1ms
         max-idle: 8
         min-idle: 0
+  
+  # RabbitMQ配置
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+    # 消费者配置
+    listener:
+      simple:
+        acknowledge-mode: manual # 手动确认消息
+        concurrency: 5 # 最小消费者数量
+        max-concurrency: 10 # 最大消费者数量
+        prefetch: 10 # 每次从队列获取的消息数量
+    # 连接工厂配置
+    connection-timeout: 60000
+    # 发布者确认配置
+    publisher-confirm-type: correlated
+    publisher-returns: true
 
 # JWT配置
 jwt:
