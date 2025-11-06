@@ -46,7 +46,7 @@ try {
             [string]$token
         )
         
-        [Console]::WriteLine("\n=== Testing Order Message ===")
+        Write-Output "\n=== Testing Order Message ==="
         try {
             # Build order message request body matching OrderMessage class structure
             $orderBody = @{
@@ -57,8 +57,8 @@ try {
                 amount = 99.99
             } | ConvertTo-Json -Depth 3
             
-            [Console]::WriteLine("Sending Order Data:")
-            [Console]::WriteLine($orderBody)
+            Write-Output "Sending Order Data:"
+            Write-Output $orderBody
             
             # Set request headers
             $headers = @{
@@ -69,13 +69,13 @@ try {
             # Send order message request
             $orderResponse = Invoke-RestMethod -Uri "$baseUrl$orderEndpoint" -Method Post -Body $orderBody -Headers $headers -ErrorAction Stop
             
-            [Console]::WriteLine("Order message sent successfully!")
-            [Console]::WriteLine("Response: $orderResponse")
+            Write-Output "Order message sent successfully!"
+            Write-Output "Response: $orderResponse"
             return $true
         } catch {
-            [Console]::WriteLine("Order message test failed: $($_.Exception.Message)")
+            Write-Output "Order message test failed: $($_.Exception.Message)"
             if ($_.ErrorDetails) {
-                [Console]::WriteLine("Error details: $($_.ErrorDetails.Message)")
+                Write-Output "Error details: $($_.ErrorDetails.Message)"
             }
             return $false
         }
@@ -87,7 +87,7 @@ try {
             [string]$token
         )
         
-        [Console]::WriteLine("\n=== Testing Log Message ===")
+        Write-Output "\n=== Testing Log Message ==="
         try {
             # Build log message request body matching LogMessage class structure
             $logBody = @{
@@ -99,8 +99,8 @@ try {
                 userId = "user"
             } | ConvertTo-Json -Depth 3
             
-            [Console]::WriteLine("Sending Log Data:")
-            [Console]::WriteLine($logBody)
+            Write-Output "Sending Log Data:"
+            Write-Output $logBody
             
             # Set request headers
             $headers = @{
@@ -111,13 +111,13 @@ try {
             # Send log message request
             $logResponse = Invoke-RestMethod -Uri "$baseUrl$logEndpoint" -Method Post -Body $logBody -Headers $headers -ErrorAction Stop
             
-            [Console]::WriteLine("Log message sent successfully!")
-            [Console]::WriteLine("Response: $logResponse")
+            Write-Output "Log message sent successfully!"
+            Write-Output "Response: $logResponse"
             return $true
         } catch {
-            [Console]::WriteLine("Log message test failed: $($_.Exception.Message)")
+            Write-Output "Log message test failed: $($_.Exception.Message)"
             if ($_.ErrorDetails) {
-                [Console]::WriteLine("Error details: $($_.ErrorDetails.Message)")
+                Write-Output "Error details: $($_.ErrorDetails.Message)"
             }
             return $false
         }
@@ -129,7 +129,7 @@ try {
             [string]$token
         )
         
-        [Console]::WriteLine("\n=== Testing Notification Message ===")
+        Write-Output "\n=== Testing Notification Message ==="
         try {
             # Build notification message request body matching NotificationMessage class structure
             $notificationBody = @{
@@ -140,8 +140,8 @@ try {
                 sender = "system"
             } | ConvertTo-Json -Depth 3
             
-            [Console]::WriteLine("Sending Notification Data:")
-            [Console]::WriteLine($notificationBody)
+            Write-Output "Sending Notification Data:"
+            Write-Output $notificationBody
             
             # Set request headers
             $headers = @{
@@ -152,13 +152,13 @@ try {
             # Send notification message request
             $notificationResponse = Invoke-RestMethod -Uri "$baseUrl$notificationEndpoint" -Method Post -Body $notificationBody -Headers $headers -ErrorAction Stop
             
-            [Console]::WriteLine("Notification message sent successfully!")
-            [Console]::WriteLine("Response: $notificationResponse")
+            Write-Output "Notification message sent successfully!"
+            Write-Output "Response: $notificationResponse"
             return $true
         } catch {
-            [Console]::WriteLine("Notification message test failed: $($_.Exception.Message)")
+            Write-Output "Notification message test failed: $($_.Exception.Message)"
             if ($_.ErrorDetails) {
-                [Console]::WriteLine("Error details: $($_.ErrorDetails.Message)")
+                Write-Output "Error details: $($_.ErrorDetails.Message)"
             }
             return $false
         }

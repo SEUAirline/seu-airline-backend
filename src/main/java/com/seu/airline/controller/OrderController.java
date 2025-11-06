@@ -1,117 +1,61 @@
 package com.seu.airline.controller;
 
-import com.seu.airline.dto.ApiResponse;
+import com.seu.airline.config.RabbitMQConfig;
 import com.seu.airline.dto.OrderDTO;
-import com.seu.airline.security.UserDetailsImpl;
+import com.seu.airline.model.rabbitmq.OrderMessage;
 import com.seu.airline.service.OrderService;
+import com.seu.airline.service.rabbitmq.RabbitMQSenderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/orders")
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class OrderController {
 
     @Autowired
     private OrderService orderService;
+    
+    @Autowired
+    private RabbitMQSenderService rabbitMQSenderService;
 
-    // 创建订单
-    @PostMapping
-    public ResponseEntity<?> createOrder(
-            @RequestBody OrderRequest orderRequest,
-            Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+    // 订单请求DTO
+    public static class OrderRequest {
+        private List<OrderItemRequest> items;
+        private String flightNumber;
 
-        try {
-            OrderDTO orderDTO = orderService.createOrder(orderRequest, userDetails.getId());
-            return ResponseEntity.ok(ApiResponse.success(orderDTO, "订单创建成功"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("创建订单失败: " + e.getMessage()));
+        // getter and setter
+        public List<OrderItemRequest> getItems() {
+            return items;
+        }
+
+        public void setItems(List<OrderItemRequest> items) {
+            this.items = items;
+        }
+
+        public String getFlightNumber() {
+            return flightNumber;
+        }
+
+        public void setFlightNumber(String flightNumber) {
+            this.flightNumber = flightNumber;
         }
     }
 
-    // 获取用户的所有订单
-    @GetMapping
-    public ResponseEntity<?> getUserOrders(Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        List<OrderDTO> orderDTOs = orderService.getUserOrders(userDetails.getId());
-        return ResponseEntity.ok(ApiResponse.success(orderDTOs));
-    } // 获取订单详情
-
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getOrderById(
-            @PathVariable Long id,
-            Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
-        try {
-            OrderDTO orderDTO = orderService.getOrderById(id, userDetails.getId());
-            return ResponseEntity.ok(ApiResponse.success(orderDTO));
-        } catch (RuntimeException e) {
-            if (e.getMessage().equals("订单不存在")) {
-                return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
-            }
-            if (e.getMessage().equals("无权访问此订单")) {
-                return ResponseEntity.status(403).body(ApiResponse.error(e.getMessage()));
-            }
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    } // 取消订单
-
-    @PutMapping("/{id}/cancel")
-    public ResponseEntity<?> cancelOrder(
-            @PathVariable Long id,
-            Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
-        try {
-            OrderDTO orderDTO = orderService.cancelOrder(id, userDetails.getId());
-            return ResponseEntity.ok(ApiResponse.success(orderDTO, "订单已取消"));
-        } catch (RuntimeException e) {
-            if (e.getMessage().equals("订单不存在")) {
-                return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
-            }
-            if (e.getMessage().equals("无权操作此订单")) {
-                return ResponseEntity.status(403).body(ApiResponse.error(e.getMessage()));
-            }
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
-    // 支付订单
-    @PutMapping("/{id}/pay")
-    public ResponseEntity<?> payOrder(
-            @PathVariable Long id,
-            Authentication authentication) {
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
-        try {
-            OrderDTO orderDTO = orderService.payOrder(id, userDetails.getId());
-            return ResponseEntity.ok(ApiResponse.success(orderDTO, "支付成功"));
-        } catch (RuntimeException e) {
-            if (e.getMessage().equals("订单不存在")) {
-                return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
-            }
-            if (e.getMessage().equals("无权操作此订单")) {
-                return ResponseEntity.status(403).body(ApiResponse.error(e.getMessage()));
-            }
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
-    // 请求和响应类
+    // 订单项请求DTO
     public static class OrderItemRequest {
         private Long seatId;
         private String passengerName;
         private String passengerIdCard;
 
-        // getters and setters
+        // getter and setter
         public Long getSeatId() {
             return seatId;
         }
@@ -137,18 +81,90 @@ public class OrderController {
         }
     }
 
-    public static class OrderRequest {
-        private List<OrderItemRequest> items;
-
-        // getters and setters
-        public List<OrderItemRequest> getItems() {
-            return items;
-        }
-
-        public void setItems(List<OrderItemRequest> items) {
-            this.items = items;
-        }
+    /**
+     * 创建订单 - 异步处理
+     */
+    @PostMapping
+    public ResponseEntity<String> createOrder(@RequestBody OrderRequest orderRequest) {
+        Long userId = getCurrentUserId();
+        
+        // 创建订单消息
+        OrderMessage orderMessage = new OrderMessage();
+        orderMessage.setMessageId(UUID.randomUUID().toString());
+        orderMessage.setSource("API");
+        orderMessage.setTimestamp(LocalDateTime.now());
+        orderMessage.setType("ORDER_CREATE");
+        orderMessage.setUserId(userId.toString());
+        orderMessage.setFlightNumber(orderRequest.getFlightNumber());
+        
+        // 将订单项详情添加到消息中
+        orderMessage.setItems(orderRequest.getItems().stream()
+                .map(item -> new OrderMessage.OrderItemDetail(
+                        item.getSeatId(),
+                        item.getPassengerName(),
+                        item.getPassengerIdCard()))
+                .toList());
+        
+        // 发送到订单队列
+        rabbitMQSenderService.sendMessage(
+                RabbitMQConfig.ORDER_EXCHANGE,
+                RabbitMQConfig.ORDER_ROUTING_KEY,
+                orderMessage
+        );
+        
+        return ResponseEntity.ok("订单请求已接收，正在处理中");
     }
 
+    /**
+     * 获取用户订单列表
+     */
+    @GetMapping
+    public ResponseEntity<List<OrderDTO>> getUserOrders() {
+        Long userId = getCurrentUserId();
+        List<OrderDTO> orders = orderService.getUserOrders(userId);
+        return ResponseEntity.ok(orders);
+    }
 
+    /**
+     * 获取订单详情
+     */
+    @GetMapping("/{orderId}")
+    public ResponseEntity<OrderDTO> getOrderById(@PathVariable Long orderId) {
+        Long userId = getCurrentUserId();
+        OrderDTO order = orderService.getOrderById(orderId, userId);
+        return ResponseEntity.ok(order);
+    }
+
+    /**
+     * 取消订单
+     */
+    @PutMapping("/{orderId}/cancel")
+    public ResponseEntity<OrderDTO> cancelOrder(@PathVariable Long orderId) {
+        Long userId = getCurrentUserId();
+        OrderDTO order = orderService.cancelOrder(orderId, userId);
+        return ResponseEntity.ok(order);
+    }
+
+    /**
+     * 支付订单
+     */
+    @PutMapping("/{orderId}/pay")
+    public ResponseEntity<OrderDTO> payOrder(@PathVariable Long orderId) {
+        Long userId = getCurrentUserId();
+        OrderDTO order = orderService.payOrder(orderId, userId);
+        return ResponseEntity.ok(order);
+    }
+
+    /**
+     * 获取当前登录用户ID
+     */
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            // 这里假设用户ID存储在username字段中，实际应用中可能需要调整
+            return Long.parseLong(userDetails.getUsername());
+        }
+        throw new RuntimeException("用户未登录");
+    }
 }
