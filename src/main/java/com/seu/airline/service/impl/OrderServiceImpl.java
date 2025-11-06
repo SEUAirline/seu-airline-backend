@@ -10,6 +10,7 @@ import com.seu.airline.repository.OrderItemRepository;
 import com.seu.airline.repository.OrderRepository;
 import com.seu.airline.repository.SeatRepository;
 import com.seu.airline.service.OrderService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.math.BigDecimal;
 
+@Slf4j
 @Service
 public class OrderServiceImpl implements OrderService {
 
@@ -31,11 +33,14 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private SeatRepository seatRepository;
+    
+    @Autowired
+    private RedisLockService redisLockService;
 
     @Override
     @Transactional
     public OrderDTO createOrder(OrderController.OrderRequest orderRequest, Long userId) {
-        // 创建订单
+        // 创建订单对象
         Order order = new Order();
         order.setOrderNumber(generateOrderNumber());
         User user = new User();
@@ -45,43 +50,69 @@ public class OrderServiceImpl implements OrderService {
         order.setCreatedAt(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
 
-        // 计算总金额并验证座位
+        // 计算总金额
         BigDecimal totalAmount = BigDecimal.ZERO;
+        
+        // 先验证所有座位是否存在并可预订
         for (OrderController.OrderItemRequest item : orderRequest.getItems()) {
             Optional<Seat> seatOpt = seatRepository.findById(item.getSeatId());
             if (!seatOpt.isPresent()) {
-                throw new RuntimeException("座位不存在");
+                throw new RuntimeException("座位不存在: " + item.getSeatId());
             }
-
+            
             Seat seat = seatOpt.get();
             if (seat.getStatus() != Seat.SeatStatus.AVAILABLE) {
-                throw new RuntimeException("座位已被占用");
+                throw new RuntimeException("座位已被占用: " + item.getSeatId());
             }
+            
             totalAmount = totalAmount.add(seat.getPrice());
         }
-
+        
         order.setTotalAmount(totalAmount);
         Order savedOrder = orderRepository.save(order);
+        
+        log.info("创建订单成功: orderNumber={}, userId={}, seatCount={}", 
+                 order.getOrderNumber(), userId, orderRequest.getItems().size());
 
-        // 创建订单详情并更新座位状态
+        // 对每个座位使用分布式锁进行保护，确保并发安全
         for (OrderController.OrderItemRequest item : orderRequest.getItems()) {
-            OrderItem orderItem = new OrderItem();
-            orderItem.setOrder(savedOrder);
-
-            Optional<Seat> seatOpt = seatRepository.findById(item.getSeatId());
-            if (seatOpt.isPresent()) {
-                Seat seat = seatOpt.get();
-                orderItem.setSeat(seat);
-                orderItem.setPassengerName(item.getPassengerName());
-                orderItem.setPassengerIdCard(item.getPassengerIdCard());
-                orderItem.setPrice(seat.getPrice());
-                orderItem.setCreatedAt(LocalDateTime.now());
-
-                // 更新座位状态
-                seat.setStatus(Seat.SeatStatus.RESERVED);
-                seatRepository.save(seat);
-
-                orderItemRepository.save(orderItem);
+            try {
+                // 使用分布式锁保护座位资源，超时时间5秒
+                redisLockService.executeWithLock(item.getSeatId(), 5000, () -> {
+                    // 再次检查座位状态（双重检查锁模式）
+                    Optional<Seat> seatOpt = seatRepository.findById(item.getSeatId());
+                    if (!seatOpt.isPresent()) {
+                        throw new RuntimeException("座位不存在: " + item.getSeatId());
+                    }
+                    
+                    Seat seat = seatOpt.get();
+                    if (seat.getStatus() != Seat.SeatStatus.AVAILABLE) {
+                        throw new RuntimeException("座位已被占用: " + item.getSeatId());
+                    }
+                    
+                    // 创建订单详情
+                    OrderItem orderItem = new OrderItem();
+                    orderItem.setOrder(savedOrder);
+                    orderItem.setSeat(seat);
+                    orderItem.setPassengerName(item.getPassengerName());
+                    orderItem.setPassengerIdCard(item.getPassengerIdCard());
+                    orderItem.setPrice(seat.getPrice());
+                    orderItem.setCreatedAt(LocalDateTime.now());
+                    
+                    // 更新座位状态为已预订
+                    seat.setStatus(Seat.SeatStatus.RESERVED);
+                    seatRepository.save(seat);
+                    
+                    // 保存订单详情
+                    orderItemRepository.save(orderItem);
+                    
+                    log.info("座位预订成功: seatId={}, orderNumber={}", seat.getId(), order.getOrderNumber());
+                    return null;
+                });
+            } catch (Exception e) {
+                log.error("座位预订失败: seatId={}, error={}", item.getSeatId(), e.getMessage());
+                // 抛出运行时异常，触发事务回滚
+                throw new RuntimeException("座位预订失败: " + e.getMessage());
             }
         }
 
