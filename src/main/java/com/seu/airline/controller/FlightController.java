@@ -1,6 +1,7 @@
 package com.seu.airline.controller;
 
 import com.seu.airline.dto.ApiResponse;
+import com.seu.airline.security.UserDetailsImpl;
 import com.seu.airline.service.FlightService;
 import com.seu.airline.service.FlightViewHistoryService;
 import com.seu.airline.service.FlightRecommenderService;
@@ -158,8 +159,11 @@ public class FlightController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null && authentication.isAuthenticated() && !(authentication.getPrincipal() instanceof String)) {
                 UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-                Long userId = Long.parseLong(userDetails.getUsername());
                 
+                // Debug lines  
+                System.out.println("##### UserDetails: " + userDetails);
+                Long userId = Long.parseLong(userDetails.getUsername());
+                System.out.println("##### Userid: " + userId);
                 // 限制最大返回数量
                 int actualLimit = Math.min(limit, 20);
                 var recommendations = flightRecommenderService.getPersonalizedRecommendations(userId, actualLimit);
@@ -176,8 +180,8 @@ public class FlightController {
             try {
                 Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
                 if (authentication != null && authentication.isAuthenticated() && !(authentication.getPrincipal() instanceof String)) {
-                    UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-                    Long userId = Long.parseLong(userDetails.getUsername());
+                    UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+                    Long userId = userDetails.getId();
                     
                     int actualLimit = Math.min(limit, 20);
                     var fallbackRecommendations = flightViewHistoryService.getRecommendedFlights(userId, actualLimit);

@@ -58,6 +58,10 @@ public class UserDetailsImpl implements UserDetails {
         return username;
     }
 
+    public Long getId() {
+        return id;
+    }
+
     @Override
     public boolean isAccountNonExpired() {
         return true;
