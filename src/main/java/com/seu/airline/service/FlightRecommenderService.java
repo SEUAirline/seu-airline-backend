@@ -29,7 +29,7 @@ public class FlightRecommenderService {
     private FlightViewHistoryService flightViewHistoryService;
 
     private static final int INPUT_LAYER_SIZE = 6;
-    private static final int HIDDEN_LAYER_SIZE = 10;
+    private static final int HIDDEN_LAYER_SIZE = 20;
     private static final int EPOCHS = 100;
 
     // 并发安全的模型缓存
@@ -130,19 +130,19 @@ public class FlightRecommenderService {
         int first = Objects.requireNonNullElse(flight.getFirstClassSeats(), 0);
         int totalAvailableSeats = economy + business + first;
         double seatRatio = Math.min(totalAvailableSeats / 300.0, 1.0);
-        features[2] = seatRatio;
+        features[2] = seatRatio * 0.1;
 
         // 4 价格（防 null）
         double price = flight.getPrice() != null ? flight.getPrice() : 0.0;
-        features[3] = normalize(price, 100.0, 10000.0);
+        features[3] = normalize(price, 100.0, 10000.0) * 0.6;
 
         // 5 飞行时长（小时）
         double durationHours = calculateDurationInHours(flight.getDepartureTime(), flight.getArrivalTime());
-        features[4] = normalize(durationHours, 0.0, 24.0);
+        features[4] = normalize(durationHours, 0.0, 24.0) * 0.2;
 
         // 6 起飞小时偏好
         int hourOfDay = extractHourFromDepartureTime(flight.getDepartureTime());
-        features[5] = normalize(hourOfDay, 0.0, 23.0);
+        features[5] = normalize(hourOfDay, 0.0, 23.0) * 0.3;
 
         return features;
     }

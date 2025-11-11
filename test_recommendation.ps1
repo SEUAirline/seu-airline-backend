@@ -1,19 +1,22 @@
 # -------------------------
-# Minimal PS1: Login + Call /personalized-recommendations
+# Integrated Test Script:
+# Login + Simulate Redis browsing history + Call /personalized-recommendations
 # -------------------------
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
-# Server config
+# --- Configuration ---
 $hostUrl = "http://localhost:8080"
 $loginUrl = "$hostUrl/api/auth/login"
 $recommendUrl = "$hostUrl/api/flight/personalized-recommendations?limit=5"
+$redisCli = "redis-cli"   # assumes redis-cli in PATH
+$userId = 5               # user ID to simulate
+$flightIds = @(7, 8, 9, 10, 11)  # simulated viewed flights
 
-# Test credentials
 $username = "user"
 $password = "user123"
 
-Write-Output "=== Flight Recommendation Test ==="
+Write-Output "=== Flight Recommendation Integrated Test ==="
 Write-Output ""
 
 # -------------------------
@@ -48,9 +51,26 @@ try {
 }
 
 # -------------------------
-# Step 2: Call personalized recommendation endpoint
+# Step 2: Simulate browsing history in Redis
 # -------------------------
-Write-Output "-- Step 2: Fetching personalized recommendations --"
+Write-Output "-- Step 2: Simulating user browsing history in Redis --"
+
+foreach ($fid in $flightIds) {
+    $cmd = "LPUSH user:history:$userId `"$fid`""
+    Write-Output "Executing: $cmd"
+    & $redisCli LPUSH "user:history:$userId" "$fid" | Out-Null
+}
+
+Write-Output "`n--- Redis verification ---"
+& $redisCli LRANGE "user:history:$userId" 0 -1
+
+Write-Output "✅ Browsing history successfully written to Redis."
+Write-Output ""
+
+# -------------------------
+# Step 3: Fetch personalized recommendations
+# -------------------------
+Write-Output "-- Step 3: Fetching personalized recommendations --"
 Write-Output "URL: $recommendUrl"
 
 $headers = @{
