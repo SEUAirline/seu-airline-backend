@@ -60,7 +60,7 @@ Write-Host "测试3: 创建乘客 POST /api/passengers" -ForegroundColor Yellow
 $createBody = @{
     passengerName = "自动化乘客测试"
     idType = "ID_CARD"
-    idCard = "320106199001011234"
+    idCard = "320106199909091234"
     phone = "13900001111"
     email = "testpassenger@example.com"
     passengerType = "ADULT"
@@ -69,7 +69,7 @@ $createBody = @{
 
 $createdId = $null
 try {
-    $resp = Invoke-RestMethod -Uri "$baseUrl/passengers" -Method Post -Headers $headers -Body $createBody -ContentType "application/json"
+    $resp = Invoke-RestMethod -Uri "$baseUrl/passengers" -Method Post -Headers $headers -Body $createBody -ContentType "application/json; charset=utf-8"
     if ($resp.success -eq $true -and $resp.data) {
         $created = $resp.data
         $createdId = $created.id
@@ -111,7 +111,7 @@ $updateBody = @{
 } | ConvertTo-Json
 
 try {
-    $resp = Invoke-RestMethod -Uri "$baseUrl/passengers/$createdId" -Method Put -Headers $headers -Body $updateBody -ContentType "application/json"
+    $resp = Invoke-RestMethod -Uri "$baseUrl/passengers/$createdId" -Method Put -Headers $headers -Body $updateBody -ContentType "application/json; charset=utf-8"
     if ($resp.success -eq $true -and $resp.data) {
         Write-Host "✓ 更新成功: 新名称 = $($resp.data.passengerName), 新电话 = $($resp.data.phone)" -ForegroundColor Green
     } else {
