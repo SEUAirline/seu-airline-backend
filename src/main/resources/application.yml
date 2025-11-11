@@ -16,7 +16,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     database-platform: org.hibernate.dialect.MySQL8Dialect
   main:
     allow-circular-references: true

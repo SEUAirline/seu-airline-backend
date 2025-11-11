@@ -1,7 +1,9 @@
 -- ====================================================================
 -- SEUAirline 数据库初始化脚本（完整版）
--- 包含：数据库创建、表结构、初始数据、测试数据、座位数据
+-- 包含：数据库创建、表结构、初始数据、测试数据、座位数据、乘客信息
 -- 此脚本可重复执行，使用 ON DUPLICATE KEY UPDATE 避免重复插入
+-- 更新日期：2025-11-12
+-- 新增：乘客信息表（passengers），用于保存用户的常用乘客信息
 -- ====================================================================
 
 -- 设置SQL模式，确保兼容性
@@ -115,6 +117,25 @@ CREATE TABLE IF NOT EXISTS orders (
     INDEX idx_status (status)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '订单表';
 
+-- 创建乘客信息表
+CREATE TABLE IF NOT EXISTS passengers (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '乘客ID',
+    user_id BIGINT NOT NULL COMMENT '所属用户ID',
+    passenger_name VARCHAR(100) NOT NULL COMMENT '乘客姓名',
+    id_type VARCHAR(20) NOT NULL DEFAULT 'ID_CARD' COMMENT '证件类型（ID_CARD-身份证/PASSPORT-护照/OTHER-其他）',
+    id_card VARCHAR(50) NOT NULL COMMENT '证件号码',
+    phone VARCHAR(20) COMMENT '联系电话',
+    email VARCHAR(100) COMMENT '邮箱地址',
+    passenger_type VARCHAR(20) NOT NULL DEFAULT 'ADULT' COMMENT '乘客类型（ADULT-成人/CHILD-儿童/INFANT-婴儿）',
+    is_default BOOLEAN DEFAULT FALSE COMMENT '是否默认乘客（每个用户只能有一个默认乘客）',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_id_card (id_card),
+    INDEX idx_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='乘客信息表';
+
 -- 创建订单详情表
 CREATE TABLE IF NOT EXISTS order_items (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -122,12 +143,16 @@ CREATE TABLE IF NOT EXISTS order_items (
     seat_id BIGINT NOT NULL COMMENT '座位ID',
     passenger_name VARCHAR(100) NOT NULL COMMENT '乘客姓名',
     passenger_id_card VARCHAR(50) COMMENT '乘客身份证号',
+    passenger_type VARCHAR(20) COMMENT '乘客类型（ADULT-成人/CHILD-儿童/INFANT-婴儿）',
+    passenger_id BIGINT COMMENT '关联的乘客ID（可选）',
     price DECIMAL(10, 2) NOT NULL COMMENT '票价',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders (id),
     FOREIGN KEY (seat_id) REFERENCES seats (id),
+    FOREIGN KEY (passenger_id) REFERENCES passengers(id) ON DELETE SET NULL,
     INDEX idx_order_id (order_id),
-    INDEX idx_seat_id (seat_id)
+    INDEX idx_seat_id (seat_id),
+    INDEX idx_passenger_id (passenger_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '订单详情表';
 
 -- ====================================================================
@@ -183,6 +208,32 @@ VALUES (
         1
     )
 ON DUPLICATE KEY UPDATE
+    updated_at = CURRENT_TIMESTAMP;
+
+-- 插入乘客信息数据（为测试用户添加常用乘客）
+INSERT INTO
+    passengers (
+        user_id,
+        passenger_name,
+        id_type,
+        id_card,
+        phone,
+        email,
+        passenger_type,
+        is_default
+    )
+VALUES
+    -- passenger1 (user_id=2) 的常用乘客
+    (2, '张三', 'ID_CARD', '320106199001011234', '13800138000', 'zhangsan@example.com', 'ADULT', TRUE),
+    (2, '李四', 'ID_CARD', '320106199502021234', '13900139000', 'lisi@example.com', 'ADULT', FALSE),
+    (2, '王小明', 'ID_CARD', '320106201501011234', '13700137000', NULL, 'CHILD', FALSE),
+    -- passenger2 (user_id=3) 的常用乘客
+    (3, '赵六', 'PASSPORT', 'E12345678', '13600136000', 'zhaoliu@example.com', 'ADULT', TRUE),
+    (3, '孙七', 'ID_CARD', '320106199203031234', '13500135000', 'sunqi@example.com', 'ADULT', FALSE)
+ON DUPLICATE KEY UPDATE
+    passenger_name = VALUES(passenger_name),
+    phone = VALUES(phone),
+    email = VALUES(email),
     updated_at = CURRENT_TIMESTAMP;
 
 -- 插入航空公司数据
