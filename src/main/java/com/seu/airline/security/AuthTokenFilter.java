@@ -36,9 +36,13 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+            } else if (jwt != null) {
+                // Token 存在但验证失败，记录为过期
+                request.setAttribute("tokenExpired", true);
             }
         } catch (Exception e) {
             logger.error("Cannot set user authentication: {}", e);
+            request.setAttribute("tokenExpired", true);
         }
 
         filterChain.doFilter(request, response);

@@ -1,5 +1,6 @@
 package com.seu.airline.config;
 
+import com.seu.airline.security.AuthEntryPointJwt;
 import com.seu.airline.security.AuthTokenFilter;
 import com.seu.airline.security.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ public class WebSecurityConfig {
 
     @Autowired
     UserDetailsServiceImpl userDetailsService;
+
+    @Autowired
+    private AuthEntryPointJwt unauthorizedHandler;
 
     @Bean
     public AuthTokenFilter authenticationJwtTokenFilter() {
@@ -53,6 +57,7 @@ public class WebSecurityConfig {
         http
                 .cors(cors -> cors.configure(http))
                 .csrf(csrf -> csrf.disable())
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // 注意: context-path是/api，所以这里的路径是相对于/api的
@@ -63,7 +68,7 @@ public class WebSecurityConfig {
                         .permitAll()
                         .antMatchers("/public/**").permitAll() // 公共接口允许访问
                         // 允许机场和航班查询接口无需认证(方便用户搜索)
-                        .antMatchers("/airports/**", "/flights/**").permitAll()
+                        .antMatchers("/airport/**", "/flight/**").permitAll()
                         // 订单相关接口需要乘客角色
                         .antMatchers("/orders/**").hasRole("PASSENGER")
                         // 管理员接口需要ADMIN角色
