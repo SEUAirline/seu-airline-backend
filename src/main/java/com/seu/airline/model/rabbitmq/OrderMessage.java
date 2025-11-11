@@ -36,6 +36,9 @@ public class OrderMessage extends BaseMessage {
         private String passengerName;
         private String passengerIdCard;
         
+        // ✅ Jackson 需要这个无参构造函数
+        public OrderItemDetail() {
+        }
         public OrderItemDetail(Long seatId, String passengerName, String passengerIdCard) {
             this.seatId = seatId;
             this.passengerName = passengerName;
