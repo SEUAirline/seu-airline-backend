@@ -100,9 +100,11 @@ public class UserController {
                 user.setIdCard(profileDTO.getIdCard());
             }
 
-            userRepository.save(user);
+            User savedUser = userRepository.save(user);
             
-            return ResponseEntity.ok(ApiResponse.success(null, "更新成功"));
+            // 返回更新后的完整用户信息
+            UserProfileDTO updatedProfile = UserProfileDTO.fromUser(savedUser);
+            return ResponseEntity.ok(ApiResponse.success(updatedProfile, "更新成功"));
         } catch (Exception e) {
             log.error("更新用户信息失败", e);
             return ResponseEntity
