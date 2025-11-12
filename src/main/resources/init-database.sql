@@ -220,6 +220,7 @@ INSERT INTO
         full_name,
         email,
         phone,
+        id_card,
         role,
         status
     )
@@ -229,6 +230,7 @@ VALUES (
         '系统管理员',
         'admin@seuairline.com',
         '13800138000',
+        '320106198001011234',
         'ADMIN',
         1
     ),
@@ -238,6 +240,7 @@ VALUES (
         '张三',
         'zhangsan@example.com',
         '13900139001',
+        '320106199001011234',
         'PASSENGER',
         1
     ),
@@ -247,6 +250,7 @@ VALUES (
         '李四',
         'lisi@example.com',
         '13900139002',
+        '320106199502021234',
         'PASSENGER',
         1
     ),
@@ -256,6 +260,7 @@ VALUES (
         '王五',
         'wangwu@seuairline.com',
         '13900139003',
+        '320106198505051234',
         'STAFF',
         1
     )

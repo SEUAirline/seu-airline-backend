@@ -55,19 +55,26 @@ public class OrderController {
             order.setCreatedAt(LocalDateTime.now());
             order.setUpdatedAt(LocalDateTime.now());
 
-            // 计算总金额
-            BigDecimal totalAmount = BigDecimal.ZERO;
-            for (OrderItemRequest item : orderRequest.getItems()) {
-                Optional<Seat> seatOpt = seatRepository.findById(item.getSeatId());
-                if (!seatOpt.isPresent()) {
-                    return ResponseEntity.badRequest().body(ApiResponse.error("座位不存在"));
-                }
+            // 使用前端传递的总金额(包含额外服务费用等)
+            // 如果前端没有传递,则按座位价格计算
+            BigDecimal totalAmount;
+            if (orderRequest.getTotalAmount() != null && orderRequest.getTotalAmount().compareTo(BigDecimal.ZERO) > 0) {
+                totalAmount = orderRequest.getTotalAmount();
+            } else {
+                // 后备方案: 计算总金额
+                totalAmount = BigDecimal.ZERO;
+                for (OrderItemRequest item : orderRequest.getItems()) {
+                    Optional<Seat> seatOpt = seatRepository.findById(item.getSeatId());
+                    if (!seatOpt.isPresent()) {
+                        return ResponseEntity.badRequest().body(ApiResponse.error("座位不存在"));
+                    }
 
-                Seat seat = seatOpt.get();
-                if (seat.getStatus() != Seat.SeatStatus.AVAILABLE) {
-                    return ResponseEntity.badRequest().body(ApiResponse.error("座位已被占用"));
+                    Seat seat = seatOpt.get();
+                    if (seat.getStatus() != Seat.SeatStatus.AVAILABLE) {
+                        return ResponseEntity.badRequest().body(ApiResponse.error("座位已被占用"));
+                    }
+                    totalAmount = totalAmount.add(seat.getPrice());
                 }
-                totalAmount = totalAmount.add(seat.getPrice());
             }
 
             order.setTotalAmount(totalAmount);
@@ -271,6 +278,7 @@ public class OrderController {
 
     public static class OrderRequest {
         private List<OrderItemRequest> items;
+        private BigDecimal totalAmount;  // 前端计算的总金额
 
         // getters and setters
         public List<OrderItemRequest> getItems() {
@@ -279,6 +287,14 @@ public class OrderController {
 
         public void setItems(List<OrderItemRequest> items) {
             this.items = items;
+        }
+
+        public BigDecimal getTotalAmount() {
+            return totalAmount;
+        }
+
+        public void setTotalAmount(BigDecimal totalAmount) {
+            this.totalAmount = totalAmount;
         }
     }
 

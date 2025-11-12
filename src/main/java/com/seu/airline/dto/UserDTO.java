@@ -44,7 +44,7 @@ public class UserDTO {
         this.phone = user.getPhone();
         this.fullName = user.getFullName();
         this.name = user.getFullName(); // name字段作为fullName的别名
-        this.idCard = null; // User模型中暂无idCard字段
+        this.idCard = user.getIdCard(); // 从User实体获取身份证号
         this.role = user.getRole() != null ? user.getRole().name().toLowerCase() : "user";
         // 前端需要这些字段，先设置默认值
         this.vipLevel = 0;

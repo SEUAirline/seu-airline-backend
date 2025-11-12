@@ -32,6 +32,9 @@ public class User {
     @Column(length = 20)
     private String phone;
 
+    @Column(name = "id_card", length = 50)
+    private String idCard;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Role role;
