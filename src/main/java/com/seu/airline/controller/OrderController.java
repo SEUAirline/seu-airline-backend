@@ -187,6 +187,7 @@ public class OrderController {
     @PutMapping("/{id}/pay")
     public ResponseEntity<?> payOrder(
             @PathVariable Long id,
+            @RequestBody(required = false) PaymentRequest paymentRequest,
             Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
@@ -206,6 +207,12 @@ public class OrderController {
         order.setStatus(Order.OrderStatus.PAID);
         order.setPaymentTime(LocalDateTime.now());
         order.setUpdatedAt(LocalDateTime.now());
+        
+        // 设置支付方式
+        if (paymentRequest != null && paymentRequest.getPaymentMethod() != null) {
+            order.setPaymentMethod(paymentRequest.getPaymentMethod());
+        }
+        
         orderRepository.save(order);
 
         // 更新座位状态为已占用
@@ -219,7 +226,9 @@ public class OrderController {
             }
         }
 
-        return ResponseEntity.ok(ApiResponse.success(order, "支付成功"));
+        // 返回DTO而不是实体，避免懒加载序列化问题
+        OrderDTO orderDTO = new OrderDTO(order, orderItems);
+        return ResponseEntity.ok(ApiResponse.success(orderDTO, "支付成功"));
     }
 
     // 生成订单号
@@ -297,6 +306,19 @@ public class OrderController {
 
         public void setItems(List<OrderItem> items) {
             this.items = items;
+        }
+    }
+
+    public static class PaymentRequest {
+        private String paymentMethod;
+
+        // getters and setters
+        public String getPaymentMethod() {
+            return paymentMethod;
+        }
+
+        public void setPaymentMethod(String paymentMethod) {
+            this.paymentMethod = paymentMethod;
         }
     }
 }

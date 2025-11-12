@@ -39,6 +39,9 @@ public class Order {
     @Column(name = "payment_time")
     private LocalDateTime paymentTime;
 
+    @Column(name = "payment_method", length = 50)
+    private String paymentMethod;
+
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;

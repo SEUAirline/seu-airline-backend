@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class OrderDTO {
     private String id;
+    private String orderNumber;
     private Long userId;
     private String flightId;
     private String flightNo;
@@ -38,6 +39,7 @@ public class OrderDTO {
 
     public OrderDTO(Order order, List<OrderItem> orderItems) {
         this.id = order.getId() != null ? order.getId().toString() : null;
+        this.orderNumber = order.getOrderNumber();
         this.userId = order.getUser() != null ? order.getUser().getId() : null;
         this.totalAmount = order.getTotalAmount() != null ? order.getTotalAmount().doubleValue() : 0.0;
         this.status = order.getStatus() != null ? order.getStatus().name().toLowerCase() : "pending";

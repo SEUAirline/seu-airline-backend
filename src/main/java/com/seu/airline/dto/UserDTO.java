@@ -29,6 +29,7 @@ public class UserDTO {
 
     private String phone;
     private String fullName;
+    private String name; // 前端使用name字段
     private String idCard;
     private String role;
     private Integer vipLevel;
@@ -42,6 +43,8 @@ public class UserDTO {
         this.email = user.getEmail();
         this.phone = user.getPhone();
         this.fullName = user.getFullName();
+        this.name = user.getFullName(); // name字段作为fullName的别名
+        this.idCard = null; // User模型中暂无idCard字段
         this.role = user.getRole() != null ? user.getRole().name().toLowerCase() : "user";
         // 前端需要这些字段，先设置默认值
         this.vipLevel = 0;
