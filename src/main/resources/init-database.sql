@@ -1,7 +1,9 @@
 -- ====================================================================
 -- SEUAirline 数据库初始化脚本（完整版）
--- 包含：数据库创建、表结构、初始数据、测试数据、座位数据
+-- 包含：数据库创建、表结构、初始数据、测试数据、座位数据、乘客信息
 -- 此脚本可重复执行，使用 ON DUPLICATE KEY UPDATE 避免重复插入
+-- 更新日期：2025-11-12
+-- 新增：乘客信息表（passengers），用于保存用户的常用乘客信息
 -- ====================================================================
 
 -- 设置SQL模式，确保兼容性
@@ -115,6 +117,25 @@ CREATE TABLE IF NOT EXISTS orders (
     INDEX idx_status (status)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '订单表';
 
+-- 创建乘客信息表
+CREATE TABLE IF NOT EXISTS passengers (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '乘客ID',
+    user_id BIGINT NOT NULL COMMENT '所属用户ID',
+    passenger_name VARCHAR(100) NOT NULL COMMENT '乘客姓名',
+    id_type VARCHAR(20) NOT NULL DEFAULT 'ID_CARD' COMMENT '证件类型（ID_CARD-身份证/PASSPORT-护照/OTHER-其他）',
+    id_card VARCHAR(50) NOT NULL COMMENT '证件号码',
+    phone VARCHAR(20) COMMENT '联系电话',
+    email VARCHAR(100) COMMENT '邮箱地址',
+    passenger_type VARCHAR(20) NOT NULL DEFAULT 'ADULT' COMMENT '乘客类型（ADULT-成人/CHILD-儿童/INFANT-婴儿）',
+    is_default BOOLEAN DEFAULT FALSE COMMENT '是否默认乘客（每个用户只能有一个默认乘客）',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_id_card (id_card),
+    INDEX idx_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='乘客信息表';
+
 -- 创建订单详情表
 CREATE TABLE IF NOT EXISTS order_items (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -122,13 +143,69 @@ CREATE TABLE IF NOT EXISTS order_items (
     seat_id BIGINT NOT NULL COMMENT '座位ID',
     passenger_name VARCHAR(100) NOT NULL COMMENT '乘客姓名',
     passenger_id_card VARCHAR(50) COMMENT '乘客身份证号',
+    passenger_type VARCHAR(20) COMMENT '乘客类型（ADULT-成人/CHILD-儿童/INFANT-婴儿）',
+    passenger_id BIGINT COMMENT '关联的乘客ID（可选）',
     price DECIMAL(10, 2) NOT NULL COMMENT '票价',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders (id),
     FOREIGN KEY (seat_id) REFERENCES seats (id),
+    FOREIGN KEY (passenger_id) REFERENCES passengers(id) ON DELETE SET NULL,
     INDEX idx_order_id (order_id),
-    INDEX idx_seat_id (seat_id)
+    INDEX idx_seat_id (seat_id),
+    INDEX idx_passenger_id (passenger_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '订单详情表';
+
+-- 创建用户消息表
+CREATE TABLE IF NOT EXISTS messages (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '消息ID',
+    user_id BIGINT NOT NULL COMMENT '接收用户ID',
+    title VARCHAR(200) NOT NULL COMMENT '消息标题',
+    content TEXT NOT NULL COMMENT '消息内容',
+    message_type VARCHAR(20) NOT NULL COMMENT '消息类型：ORDER-订单/FLIGHT-航班/SYSTEM-系统/PROMOTION-促销',
+    related_id BIGINT COMMENT '关联ID（订单ID/航班ID等，可选）',
+    priority TINYINT DEFAULT 1 COMMENT '优先级：1-普通/2-重要/3-紧急',
+    is_read BOOLEAN DEFAULT FALSE COMMENT '是否已读',
+    read_time DATETIME COMMENT '阅读时间',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_is_read (is_read),
+    INDEX idx_message_type (message_type),
+    INDEX idx_created_at (created_at),
+    INDEX idx_user_read (user_id, is_read) COMMENT '优化查询未读消息'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户消息表';
+
+-- 创建系统公告表
+CREATE TABLE IF NOT EXISTS announcements (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '公告ID',
+    title VARCHAR(200) NOT NULL COMMENT '公告标题',
+    content TEXT NOT NULL COMMENT '公告内容（支持HTML）',
+    announcement_type VARCHAR(20) NOT NULL COMMENT '公告类型：MAINTENANCE-系统维护/PROMOTION-促销活动/NOTICE-通知公告',
+    priority TINYINT DEFAULT 1 COMMENT '优先级：1-普通/2-重要/3-紧急',
+    start_time DATETIME NOT NULL COMMENT '生效开始时间',
+    end_time DATETIME NOT NULL COMMENT '生效结束时间',
+    status TINYINT DEFAULT 1 COMMENT '状态：1-启用/0-禁用',
+    creator_id BIGINT COMMENT '创建人ID（管理员）',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_status (status),
+    INDEX idx_time_range (start_time, end_time) COMMENT '优化查询有效公告',
+    INDEX idx_announcement_type (announcement_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统公告表';
+
+-- 创建公告阅读记录表
+CREATE TABLE IF NOT EXISTS announcement_reads (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '记录ID',
+    announcement_id BIGINT NOT NULL COMMENT '公告ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    read_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '阅读时间',
+    UNIQUE KEY uk_announcement_user (announcement_id, user_id) COMMENT '防止重复记录',
+    FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_announcement_id (announcement_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='公告阅读记录表';
 
 -- ====================================================================
 -- 第二部分：基础数据初始化
@@ -183,6 +260,32 @@ VALUES (
         1
     )
 ON DUPLICATE KEY UPDATE
+    updated_at = CURRENT_TIMESTAMP;
+
+-- 插入乘客信息数据（为测试用户添加常用乘客）
+INSERT INTO
+    passengers (
+        user_id,
+        passenger_name,
+        id_type,
+        id_card,
+        phone,
+        email,
+        passenger_type,
+        is_default
+    )
+VALUES
+    -- passenger1 (user_id=2) 的常用乘客
+    (2, '张三', 'ID_CARD', '320106199001011234', '13800138000', 'zhangsan@example.com', 'ADULT', TRUE),
+    (2, '李四', 'ID_CARD', '320106199502021234', '13900139000', 'lisi@example.com', 'ADULT', FALSE),
+    (2, '王小明', 'ID_CARD', '320106201501011234', '13700137000', NULL, 'CHILD', FALSE),
+    -- passenger2 (user_id=3) 的常用乘客
+    (3, '赵六', 'PASSPORT', 'E12345678', '13600136000', 'zhaoliu@example.com', 'ADULT', TRUE),
+    (3, '孙七', 'ID_CARD', '320106199203031234', '13500135000', 'sunqi@example.com', 'ADULT', FALSE)
+ON DUPLICATE KEY UPDATE
+    passenger_name = VALUES(passenger_name),
+    phone = VALUES(phone),
+    email = VALUES(email),
     updated_at = CURRENT_TIMESTAMP;
 
 -- 插入航空公司数据
@@ -473,7 +576,54 @@ ON DUPLICATE KEY UPDATE
     status = VALUES(status);
 
 -- ====================================================================
--- 第四部分：座位数据初始化（完整版）
+-- 第四部分：消息系统测试数据初始化
+-- ====================================================================
+
+-- 插入测试消息（给 passenger1 用户，user_id=2）
+INSERT INTO messages (user_id, title, content, message_type, related_id, priority, is_read)
+VALUES 
+    (2, '订单支付成功', '您的订单 ORD20251112001 已支付成功，请准时登机。', 'ORDER', 1, 2, FALSE),
+    (2, '航班延误通知', 'CA1001 航班因天气原因延误 30 分钟，预计 10:40 起飞。', 'FLIGHT', 1, 3, FALSE),
+    (2, '系统升级通知', '系统将于今晚 23:00-01:00 进行维护升级，期间部分功能不可用。', 'SYSTEM', NULL, 1, TRUE),
+    (2, '双十二特惠活动', '双十二机票限时五折优惠，热门航线抢购中！', 'PROMOTION', NULL, 1, FALSE)
+ON DUPLICATE KEY UPDATE
+    updated_at = CURRENT_TIMESTAMP;
+
+-- 插入测试公告（面向全体用户）
+INSERT INTO announcements (title, content, announcement_type, priority, start_time, end_time, status)
+VALUES 
+    ('系统维护通知', 
+     '<p>尊敬的用户：</p><p>系统将于 <strong>2025年11月15日 23:00 - 11月16日 01:00</strong> 进行维护升级。</p><p>维护期间，订票、支付等功能暂时不可用，敬请谅解。</p>', 
+     'MAINTENANCE', 
+     2, 
+     '2025-11-12 00:00:00', 
+     '2025-11-16 23:59:59', 
+     1),
+    ('双十二大促', 
+     '<p>🎉 双十二机票大促销！</p><ul><li>国内航线 5 折起</li><li>国际航线 7 折起</li><li>活动时间：11月12日-11月20日</li></ul>', 
+     'PROMOTION', 
+     1, 
+     '2025-11-12 00:00:00', 
+     '2025-11-20 23:59:59', 
+     1),
+    ('防疫政策更新', 
+     '<p>根据最新防疫政策，自即日起取消行程码查验，保留健康码绿码通行。</p>', 
+     'NOTICE', 
+     3, 
+     '2025-11-10 00:00:00', 
+     '2025-12-31 23:59:59', 
+     1)
+ON DUPLICATE KEY UPDATE
+    updated_at = CURRENT_TIMESTAMP;
+
+-- 插入公告阅读记录（user_id=2 已读第一条公告）
+INSERT INTO announcement_reads (announcement_id, user_id)
+VALUES (1, 2)
+ON DUPLICATE KEY UPDATE
+    read_time = CURRENT_TIMESTAMP;
+
+-- ====================================================================
+-- 第五部分：座位数据初始化（完整版）
 -- CA1001: 北京→上海 (A320: 经济舱30座, 商务舱20座, 头等舱8座)
 -- MU2002: 上海→广州 (A321: 经济舱32座, 商务舱7座, 头等舱5座)
 -- CA3003: 北京→深圳 (B737: 经济舱20座, 商务舱6座, 头等舱2座)
@@ -1485,7 +1635,16 @@ SELECT '订单表', COUNT(*)
 FROM orders
 UNION ALL
 SELECT '订单详情表', COUNT(*)
-FROM order_items;
+FROM order_items
+UNION ALL
+SELECT '消息表', COUNT(*)
+FROM messages
+UNION ALL
+SELECT '公告表', COUNT(*)
+FROM announcements
+UNION ALL
+SELECT '公告阅读记录表', COUNT(*)
+FROM announcement_reads;
 
 -- 统计各航班座位情况
 SELECT
@@ -1554,4 +1713,12 @@ SELECT
     (
         SELECT COUNT(*)
         FROM seats
-    ) as 座位数;
+    ) as 座位数,
+    (
+        SELECT COUNT(*)
+        FROM messages
+    ) as 消息数,
+    (
+        SELECT COUNT(*)
+        FROM announcements
+    ) as 公告数;
